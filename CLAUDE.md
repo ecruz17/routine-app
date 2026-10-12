@@ -10,7 +10,7 @@ The user configures their unavailable hours (e.g. work/school schedule) and day 
 
 - **UI language:** Spanish. All user-facing copy is in Spanish; code, comments, identifiers and commit messages are in English.
 - **v1 persistence:** browser `localStorage` only. No database, no auth.
-- **AI:** called through an existing AWS Lambda endpoint (with throttling) that owns the model credentials. The backend is already built; this repo only consumes it. The frontend never sees an API key.
+- **AI:** called through an existing AWS Lambda endpoint (with throttling) that owns the model credentials. The backend is already built; this repo only consumes it, through a same-origin proxy (`src/app/api/organize/route.ts`) that adds the API Gateway key server-side. The browser never sees an API key.
 - **v1 has no notifications or reminders.** See "Out of scope for v1".
 
 ## Tech stack
@@ -203,7 +203,7 @@ To display durations in the UI, use the same Spanish style (`"1 h 30 min"` or `"
   - network failure / timeout (~20 s, via `AbortController`)
   - HTTP 429 from throttling → "Has hecho muchas solicitudes, intenta de nuevo en un momento"
   - other non-2xx responses or invalid JSON → "No pudimos organizar tu rutina. Intenta de nuevo."
-- **Never** put model API keys or AWS credentials in the frontend. The only env var is the public endpoint URL.
+- **Never** put model API keys or AWS credentials in the frontend. The API Gateway key (`x-api-key`) is only read by the `/api/organize` route handler; `ai-client.ts` calls that route, never the Lambda directly.
 
 ## Screens and behavior
 
@@ -276,10 +276,11 @@ Validation: end times must be after start times; the work block must fit inside 
 ## Environment variables
 
 ```
-NEXT_PUBLIC_ROUTINE_API_URL=   # Lambda/API Gateway endpoint (public, no secrets)
+ROUTINE_API_URL=   # Lambda/API Gateway endpoint, e.g. https://…/prod/organizer (server-only)
+ROUTINE_API_KEY=   # API Gateway key sent as x-api-key (server-only secret)
 ```
 
-Document any new variable here and in `.env.example`. Never commit `.env.local`.
+Document any new variable here and in `.env.example`. Never commit `.env` or `.env.local` (both gitignored); never prefix secrets with `NEXT_PUBLIC_`.
 
 ## Out of scope for v1
 
